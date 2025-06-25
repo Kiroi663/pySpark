@@ -4,7 +4,7 @@ from jinja2 import Template
 import pdfkit 
 from datetime import datetime
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 
 TEMPLATE_HTML = """
@@ -123,6 +123,6 @@ def generate_pdf():
     return send_file(output_path, as_attachment=True, download_name=filename)
 
 # 🔽 C'est ici qu'on change :
-if _name_ == "_main_": 
+if __name__ == "_main_": 
     port = int(os.environ.get("PORT", 5000))  # Render fournit le PORT automatiquement
     app.run(host="0.0.0.0", port=port)
