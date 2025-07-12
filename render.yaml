@@ -1,15 +1,12 @@
 services:
   - type: web
-    name: gotenberg
+    name: pdf-auto-generator
     env: docker
     plan: free
     dockerfilePath: ./Dockerfile
     region: oregon
     autoDeploy: true
-    healthCheckPath: /health
+    healthCheckPath: /generate
     envVars:
-      - key: CHROMIUM_DISABLE_SANDBOX
-        value: "1"
-    ports:
-      - port: 3000
-        protocol: http
+      - key: PORT
+        value: 5000
