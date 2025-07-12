@@ -1,128 +1,164 @@
 import os
-from flask import Flask, request, send_file 
-from jinja2 import Template 
-import pdfkit 
+from flask import Flask, request, send_file
+from jinja2 import Template
+import pdfkit
 from datetime import datetime
 
 app = Flask(__name__)
 
-
-TEMPLATE_HTML = """
-
-<!DOCTYPE html><html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Rapport Quotidien des Ventes</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            margin: 40px;
-            background-color: #f4f6f8;
-            color: #333;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        h1 {
-            font-size: 24px;
-            color: #005687;
-        }
-        .summary {
-            margin-top: 20px;
-            font-size: 16px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #fff;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #d9d9d9;
-            padding: 10px;
-            text-align: center;
-        }
-        th {
-            background-color: #e8f4fa;
-            color: #005687;
-        }
-        tfoot td {
-            font-weight: bold;
-            background-color: #f1f1f1;
-        }
-        .footer {
-            margin-top: 40px;
-            font-size: 13px;
-            color: #777;
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>Rapport Quotidien - Production et Ventes</h1>
-        <p>Date : {{ date }}</p>
-        <p>Jour de la semaine : {{ jour_semaine }}</p>
-    </header><table>
-    <thead>
-        <tr>
-            <th>Tour</th>
-            <th>Heure de sortie</th>
-            <th>Heure d'arrivée</th>
-            <th>Bidons Totaux</th>
-            <th>Bidons Vendus</th>
-            <th>Bidons avec Eau & Défauts</th>
-            <th>Profit Total</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for ligne in donnees %}
-        <tr>
-            <td>{{ ligne.tour }}</td>
-            <td>{{ ligne.heure_sortie }}</td>
-            <td>{{ ligne.heure_arrivee }}</td>
-            <td>{{ ligne.bidon_total }}</td>
-            <td>{{ ligne.bidon_vendu }}</td>
-            <td>{{ ligne.bidon_eau_defaut }}</td>
-            <td>{{ ligne.profit_total }} FCFA</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-    <tfoot>
-        <tr>
-            <td colspan="6">Total du jour</td>
-            <td>{{ total_journalier }} FCFA</td>
-        </tr>
-    </tfoot>
-</table>
-
-<div class="summary">
-    <p><strong>Résumé :</strong> {{ resume }}</p>
-</div>
-
-<div class="footer">
-    Rapport généré automatiquement – {{ date }}
-</div>
-
-</body>
-</html>
-"""
-
-
-@app.route("/generate", methods=["POST"]) 
-def generate_pdf(): 
-    data = request.json 
-    template = Template(TEMPLATE_HTML) 
-    rendered_html = template.render(**data)
+@app.route("/generate", methods=["POST"])
+def generate_pdf():
+    data = request.json
+    html_template = generate_html(data)
 
     filename = f"rapport_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     output_path = os.path.join("/tmp", filename)
 
-    pdfkit.from_string(rendered_html, output_path)
+    pdfkit.from_string(html_template, output_path)
     return send_file(output_path, as_attachment=True, download_name=filename)
 
-# 🔽 C'est ici qu'on change :
-if __name__ == "_main_": 
-    port = int(os.environ.get("PORT", 5000))  # Render fournit le PORT automatiquement
+def generate_html(data):
+    date = data["date"]
+    jour = data["jour_semaine"]
+    total = data["total_journalier"]
+    resume = data["resume"]
+    lignes = data["donnees"]
+    stock_bouchons = data.get("total_bouchons", "N/A")
+    stock_etiquettes = data.get("total_etiquettes", "N/A")
+    stock_trompettes = data.get("total_trompettes", "N/A")
+
+    html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rapport journalier - {date}</title>
+  <style>
+    body {{
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      color: #000;
+    }}
+    .header {{
+      background-color: #3c4c44;
+      color: white;
+      padding: 40px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }}
+    .logo {{
+      font-size: 24px;
+      font-weight: bold;
+      border: 2px solid white;
+      padding: 10px 20px;
+      border-radius: 50%;
+      text-align: center;
+    }}
+    .company-info {{
+      text-align: right;
+      font-size: 14px;
+    }}
+    .reference {{
+      padding: 30px;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+    }}
+    .table-container {{
+      padding: 0 30px;
+    }}
+    table {{
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }}
+    th, td {{
+      padding: 12px;
+      border-bottom: 1px solid #ccc;
+      text-align: center;
+    }}
+    th {{
+      border-top: 1px solid #ccc;
+    }}
+    .total {{
+      padding: 30px;
+      text-align: right;
+      font-weight: bold;
+      font-size: 18px;
+    }}
+    .stocks {{
+      padding: 0 30px;
+      font-size: 14px;
+      margin-top: 20px;
+      line-height: 1.6em;
+    }}
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">DBD<br>SARL</div>
+    <div class="company-info">
+      <div>Rapport Journalier - Usine</div>
+      <div>37, Rue Mombele, C/ Limete</div>
+    </div>
+  </div>
+
+  <div class="reference">
+    <div>
+      <div>En référence</div>
+      <div>+243828474696</div>
+      <div>37, Rue Mombele, C/ Limete</div>
+      <div>{jour}</div>
+    </div>
+    <div>{date}</div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Tour</th>
+          <th>Heure Sortie</th>
+          <th>Heure Arrivée</th>
+          <th>Nbre de Bidons</th>
+          <th>Vendu</th>
+          <th>Eau & Défauts</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(f'''
+          <tr>
+            <td>{ligne["tour"]}</td>
+            <td>{ligne["heure_sortie"]}</td>
+            <td>{ligne["heure_arrivee"]}</td>
+            <td>{ligne["bidon_total"]}</td>
+            <td>{ligne["bidon_vendu"]}</td>
+            <td>{ligne["bidon_eau_defaut"]}</td>
+            <td>{ligne["profit_total"]} FC</td>
+          </tr>''' for ligne in lignes)}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="stocks">
+    <p>📦 <strong>Stock Bouchons :</strong> {stock_bouchons}</p>
+    <p>🏷️ <strong>Stock Étiquettes :</strong> {stock_etiquettes}</p>
+    <p>🎺 <strong>Stock Trompettes :</strong> {stock_trompettes}</p>
+  </div>
+
+  <div class="total">Total : {total} FC</div>
+
+</body>
+</html>
+"""
+    return html
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
